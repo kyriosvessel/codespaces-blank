@@ -1,0 +1,103 @@
+import i18n from './i18n';
+
+const customerTranslations = {
+  "en": {
+    "continue": "Continue",
+    "bankTransfer": "Bank transfer",
+    "cardPayment": "Debit or credit card",
+    "otherPayment": "Other",
+    "paymentReferenceOptional": "Payment reference (optional)",
+    "viewDepositRequests": "View My Deposit Requests",
+    "status": "Status",
+    "method": "Method",
+    "transactionHistory": "Transaction History",
+    "transactionReference": "Transaction reference",
+    "recordedWalletHistory": "Recorded in wallet history",
+    "welcomeUser": "Welcome, {{name}}!",
+    "accountNumber": "ACCOUNT NUMBER",
+    "copyAccountNumber": "COPY ACCOUNT NUMBER",
+    "dashboard": "Dashboard",
+    "myWallet": "My Wallet",
+    "sendMoney": "Send Money"
+  },
+  "zh": {
+    "continue": "继续",
+    "bankTransfer": "银行转账",
+    "cardPayment": "借记卡或信用卡",
+    "otherPayment": "其他",
+    "paymentReferenceOptional": "付款参考编号（可选）",
+    "viewDepositRequests": "查看我的充值申请",
+    "status": "状态",
+    "method": "方式",
+    "transactionHistory": "交易记录",
+    "transactionReference": "交易参考编号",
+    "recordedWalletHistory": "已记录在钱包历史记录中",
+    "welcomeUser": "欢迎，{{name}}！",
+    "accountNumber": "账户号码",
+    "copyAccountNumber": "复制账户号码",
+    "dashboard": "仪表板",
+    "myWallet": "我的钱包",
+    "sendMoney": "转账"
+  },
+  "es": {
+    "continue": "Continuar",
+    "bankTransfer": "Transferencia bancaria",
+    "cardPayment": "Tarjeta de débito o crédito",
+    "otherPayment": "Otro",
+    "paymentReferenceOptional": "Referencia de pago (opcional)",
+    "viewDepositRequests": "Ver mis solicitudes de depósito",
+    "status": "Estado",
+    "method": "Método",
+    "transactionHistory": "Historial de transacciones",
+    "transactionReference": "Referencia de transacción",
+    "recordedWalletHistory": "Registrado en el historial de la cartera",
+    "welcomeUser": "¡Bienvenido, {{name}}!",
+    "accountNumber": "NÚMERO DE CUENTA",
+    "copyAccountNumber": "COPIAR NÚMERO DE CUENTA",
+    "dashboard": "Panel principal",
+    "myWallet": "Mi cartera",
+    "sendMoney": "Enviar dinero"
+  },
+  "pt": {
+    "continue": "Continuar",
+    "bankTransfer": "Transferência bancária",
+    "cardPayment": "Cartão de débito ou crédito",
+    "otherPayment": "Outro",
+    "paymentReferenceOptional": "Referência de pagamento (opcional)",
+    "viewDepositRequests": "Ver meus pedidos de depósito",
+    "status": "Estado",
+    "method": "Método",
+    "transactionHistory": "Histórico de transações",
+    "transactionReference": "Referência da transação",
+    "recordedWalletHistory": "Registado no histórico da carteira",
+    "welcomeUser": "Bem-vindo, {{name}}!",
+    "accountNumber": "NÚMERO DA CONTA",
+    "copyAccountNumber": "COPIAR NÚMERO DA CONTA",
+    "dashboard": "Painel",
+    "myWallet": "Minha carteira",
+    "sendMoney": "Enviar dinheiro"
+  },
+  "vi": {
+    "continue": "Tiếp tục",
+    "bankTransfer": "Chuyển khoản ngân hàng",
+    "cardPayment": "Thẻ ghi nợ hoặc thẻ tín dụng",
+    "otherPayment": "Khác",
+    "paymentReferenceOptional": "Mã tham chiếu thanh toán (không bắt buộc)",
+    "viewDepositRequests": "Xem yêu cầu nạp tiền của tôi",
+    "status": "Trạng thái",
+    "method": "Phương thức",
+    "transactionHistory": "Lịch sử giao dịch",
+    "transactionReference": "Mã tham chiếu giao dịch",
+    "recordedWalletHistory": "Đã ghi vào lịch sử ví",
+    "welcomeUser": "Chào mừng, {{name}}!",
+    "accountNumber": "SỐ TÀI KHOẢN",
+    "copyAccountNumber": "SAO CHÉP SỐ TÀI KHOẢN",
+    "dashboard": "Bảng điều khiển",
+    "myWallet": "Ví của tôi",
+    "sendMoney": "Gửi tiền"
+  }
+};
+
+for (const [language, values] of Object.entries(customerTranslations)) {
+  i18n.addResourceBundle(language, 'translation', values, true, true);
+}

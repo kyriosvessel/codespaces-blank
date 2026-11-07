@@ -1,0 +1,448 @@
+import { useEffect, useState } from 'react';
+import {
+  Wallet, Eye, EyeOff, ArrowRight, ShieldCheck, LogOut
+} from 'lucide-react';
+import { supabase } from './supabase';
+
+const purple = '#512DA8';
+const dark = '#21163D';
+const muted = '#77718B';
+const border = '#E6E0F0';
+
+function PasswordInput({ label, value, onChange, showPassword, setShowPassword, inputStyle, muted }) {
+  return (
+    <label style={{ display: 'block', marginBottom: 17 }}>
+      <span style={{
+        display: 'block', marginBottom: 8,
+        fontSize: 13, fontWeight: 700
+      }}>{label}</span>
+      <div style={{ position: 'relative' }}>
+        <input
+          required
+          type={showPassword ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          autoComplete="new-password"
+          minLength={8}
+          style={{ ...inputStyle, paddingRight: 48 }}
+        />
+        <button
+          type="button"
+          aria-label="Show or hide password"
+          onClick={() => setShowPassword(!showPassword)}
+          style={{
+            position: 'absolute', right: 12, top: 12,
+            border: 0, background: 'transparent', color: muted
+          }}
+        >
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+    </label>
+  );
+}
+
+export default function App() {
+  const [page, setPage] = useState('welcome');
+  const [session, setSession] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setNotice(error.message);
+      setSession(data?.session ?? null);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        setSession(newSession);
+      }
+    );
+
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const inputStyle = {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: 14,
+    border: `1px solid ${border}`,
+    borderRadius: 11,
+    background: '#fff',
+    color: '#222',
+    fontSize: 15,
+    outlineColor: purple
+  };
+
+  const buttonStyle = {
+    width: '100%',
+    padding: 15,
+    border: 0,
+    borderRadius: 12,
+    background: purple,
+    color: '#fff',
+    fontWeight: 700,
+    fontSize: 15,
+    cursor: 'pointer',
+    opacity: loading ? 0.7 : 1
+  };
+
+  function Brand() {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 14,
+          background: purple, color: '#fff',
+          display: 'grid', placeItems: 'center'
+        }}>
+          <Wallet size={24} />
+        </div>
+        <div>
+          <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: 1 }}>
+            KYRIOS
+          </div>
+          <div style={{ fontSize: 10, color: muted, letterSpacing: 2 }}>
+            DIGITAL WALLET
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function changePage(nextPage) {
+    setNotice('');
+    setPassword('');
+    setConfirmPassword('');
+    setPage(nextPage);
+  }
+
+  async function register(event) {
+    event.preventDefault();
+    setNotice('');
+
+    if (password.length < 8) {
+      setNotice('Your password must contain at least 8 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setNotice('Your passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: name.trim() },
+          emailRedirectTo: window.location.origin
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        setNotice('Your account has been created successfully.');
+      } else {
+        setNotice(
+          'Registration received. Check your email for a verification link before signing in.'
+        );
+      }
+    } catch (error) {
+      setNotice(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function login(event) {
+    event.preventDefault();
+    setNotice('');
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
+      });
+
+      if (error) throw error;
+      setNotice('');
+    } catch (error) {
+      setNotice(error.message || 'Sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function logout() {
+    setLoading(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    setLoading(false);
+
+    if (error) {
+      setNotice(error.message);
+    } else {
+      setNotice('');
+      setPassword('');
+      setPage('welcome');
+    }
+  }
+
+  if (session) {
+    const userName =
+      session.user.user_metadata?.full_name ||
+      session.user.email?.split('@')[0] ||
+      'User';
+
+    return (
+      <main style={{
+        minHeight: '100vh', background: '#F6F3FC',
+        padding: 22, boxSizing: 'border-box',
+        fontFamily: 'Arial, sans-serif', color: dark
+      }}>
+        <div style={{ maxWidth: 650, margin: 'auto' }}>
+          <header style={{
+            display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', gap: 12
+          }}>
+            <Brand />
+            <button onClick={logout} disabled={loading} style={{
+              padding: 12, borderRadius: 12,
+              border: `1px solid ${border}`, background: '#fff'
+            }}>
+              <LogOut size={20} />
+            </button>
+          </header>
+
+          <section style={{
+            marginTop: 35, background: '#fff',
+            padding: 25, borderRadius: 20
+          }}>
+            <ShieldCheck size={34} color={purple} />
+            <h1>欢迎, {userName}!</h1>
+            <p style={{ color: muted, lineHeight: 1.7 }}>
+              You are signed in to your Kyrios account.
+            </p>
+            <p style={{
+              background: '#F0EBFF', padding: 14,
+              borderRadius: 10, overflowWrap: 'anywhere'
+            }}>
+              <strong>Account email:</strong> {session.user.email}
+            </p>
+          </section>
+
+          <section style={{
+            marginTop: 18, background: '#fff',
+            padding: 22, borderRadius: 18
+          }}>
+            <h2>Wallet dashboard</h2>
+            <p style={{ color: muted, lineHeight: 1.7 }}>
+              Your account is connected. Deposit, withdrawal and money
+              transfer services must be integrated and secured separately
+              before you can use them.
+            </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  const registering = page === 'register';
+  const signingIn = page === 'login';
+
+  return (
+    <main style={{
+      minHeight: '100vh', background: '#F6F3FC',
+      padding: '30px 22px', boxSizing: 'border-box',
+      fontFamily: 'Arial, sans-serif', color: dark
+    }}>
+      <div style={{ maxWidth: 460, margin: 'auto' }}>
+        <Brand />
+
+        {page === 'welcome' ? (
+          <>
+            <section style={{
+              marginTop: 45, borderRadius: 25, padding: 28,
+              background: 'linear-gradient(145deg,#392078,#7954D8)',
+              color: '#fff'
+            }}>
+              <div style={{
+                width: 62, height: 62, borderRadius: 18,
+                background: '#ffffff25', display: 'grid',
+                placeItems: 'center'
+              }}>
+                <Wallet size={32} />
+              </div>
+              <h1 style={{ fontSize: 36, lineHeight: 1.2 }}>
+                Your money.<br />Your control.
+              </h1>
+              <p style={{ color: '#EEE7FF', lineHeight: 1.7 }}>
+                A simpler way to manage your digital wallet.
+              </p>
+              <button
+                onClick={() => changePage('register')}
+                style={{ ...buttonStyle, background: '#fff', color: purple }}
+              >
+                Create Account <ArrowRight size={17} />
+              </button>
+              <button
+                onClick={() => changePage('login')}
+                style={{
+                  ...buttonStyle, marginTop: 12,
+                  background: '#ffffff20',
+                  border: '1px solid #ffffff70'
+                }}
+              >
+                Sign In
+              </button>
+            </section>
+
+            <div style={{
+              display: 'flex', gap: 13, alignItems: 'center',
+              padding: 18, marginTop: 20, background: '#fff',
+              borderRadius: 16, border: `1px solid ${border}`
+            }}>
+              <ShieldCheck size={27} color={purple} />
+              <div>
+                <strong>Account security</strong>
+                <p style={{
+                  color: muted, fontSize: 12, lineHeight: 1.5
+                }}>
+                  Protect your account with a strong password.
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginTop: 38, marginBottom: 25 }}>
+              <h1 style={{ fontSize: 29 }}>
+                {registering ? 'Create your account' : '欢迎 back'}
+              </h1>
+              <p style={{ color: muted, fontSize: 14, lineHeight: 1.6 }}>
+                {registering
+                  ? 'Enter your details to get started.'
+                  : 'Sign in with your registered email and password.'}
+              </p>
+            </div>
+
+            <form onSubmit={registering ? register : login}>
+              {registering && (
+                <label style={{ display: 'block', marginBottom: 17 }}>
+                  <span style={{
+                    display: 'block', marginBottom: 8,
+                    fontSize: 13, fontWeight: 700
+                  }}>Full name</span>
+                  <input
+                    required
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    autoComplete="name"
+                    style={inputStyle}
+                  />
+                </label>
+              )}
+
+              <label style={{ display: 'block', marginBottom: 17 }}>
+                <span style={{
+                  display: 'block', marginBottom: 8,
+                  fontSize: 13, fontWeight: 700
+                }}>Email address</span>
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoComplete="email"
+                  style={inputStyle}
+                />
+              </label>
+
+              <PasswordInput
+                showPassword={showPassword}
+                setShowPassword={setShowPassword}
+                inputStyle={inputStyle}
+                muted={muted}
+                label="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+
+              {registering && (
+                <PasswordInput
+                  showPassword={showPassword}
+                  setShowPassword={setShowPassword}
+                  inputStyle={inputStyle}
+                  muted={muted}
+                  label="Confirm password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                />
+              )}
+
+              {notice && (
+                <div role="status" style={{
+                  background: '#F0EBFF', padding: 13,
+                  borderRadius: 10, marginBottom: 17,
+                  fontSize: 13, lineHeight: 1.6, overflowWrap: 'anywhere'
+                }}>
+                  {notice}
+                </div>
+              )}
+
+              <button type="submit" disabled={loading} style={buttonStyle}>
+                {loading
+                  ? 'Please wait...'
+                  : registering ? 'Create Account' : 'Sign In'}
+              </button>
+            </form>
+
+            <p style={{
+              textAlign: 'center', color: muted,
+              fontSize: 14, marginTop: 24
+            }}>
+              {registering ? 'Already registered?' : "Don't have an account?"}{' '}
+              <button
+                onClick={() => changePage(registering ? 'login' : 'register')}
+                style={{
+                  border: 0, background: 'transparent',
+                  color: purple, fontWeight: 800
+                }}
+              >
+                {registering ? 'Sign in' : 'Create account'}
+              </button>
+            </p>
+          </>
+        )}
+
+        <button
+          onClick={() => changePage('welcome')}
+          style={{
+            display: 'block', margin: '25px auto',
+            border: 0, background: 'transparent', color: muted
+          }}
+        >
+          Back to welcome
+        </button>
+      </div>
+    </main>
+  );
+}
